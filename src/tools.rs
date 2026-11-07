@@ -218,11 +218,14 @@ fn need<'a>(a: &'a Map<String, Value>, k: &str) -> Result<&'a str, String> {
     s(a, k).filter(|v| !v.is_empty()).ok_or_else(|| format!("引数 {k} がありません"))
 }
 
-/// A path for the screen: relative to the working folder when inside it.
+/// A path for the screen and the model: relative to the working folder when inside it, with `/` as the
+/// separator on every OS (the same text on Windows, and the model writes it back as it is).
 pub fn shown_path(cwd: &Path, p: &Path) -> String {
-    p.strip_prefix(cwd)
+    let text = p
+        .strip_prefix(cwd)
         .map(|r| if r.as_os_str().is_empty() { ".".into() } else { r.display().to_string() })
-        .unwrap_or_else(|_| p.display().to_string())
+        .unwrap_or_else(|_| p.display().to_string());
+    if cfg!(windows) { text.replace('\\', "/") } else { text }
 }
 
 fn path_of(env: &Env, a: &Map<String, Value>, key: &str, default_cwd: bool) -> Result<PathBuf, String> {
