@@ -292,3 +292,43 @@ async fn coding_mode_splits_the_work_and_writes_the_developers_files() {
     assert!(report.contains("## d1 — Model") && report.contains("Files written: model.txt"), "{report}");
     assert!(planner.bodies.lock().unwrap()[0]["messages"][0]["content"].as_str().unwrap().contains("# Coding mode"));
 }
+
+/// The approval card in a real terminal (needs util-linux `script`; run with `cargo test -- --ignored`).
+#[cfg(target_os = "linux")]
+#[ignore]
+#[tokio::test(flavor = "multi_thread")]
+async fn interactive_approval_yes_then_no() {
+    let server = serve(vec![
+        tool_reply("write_file", json!({"path": "a.txt", "content": "A\n"})),
+        text_reply("書きました。"),
+        tool_reply("run_command", json!({"command": "touch b.txt"})),
+        text_reply("やめました。"),
+    ])
+    .await;
+    let home = Home::new(&settings_for(&server.url, ""));
+    let input = "a.txt を作って\ny\nb も\nn テストが先\n/exit\n";
+    let out = tokio::process::Command::new("script")
+        .args(["-qec", env!("CARGO_BIN_EXE_arce"), "/dev/null"])
+        .current_dir(home.work())
+        .env("ARCE_HOME", home.dir.path().join("home"))
+        .env("NO_COLOR", "1")
+        .stdin(std::process::Stdio::piped())
+        .stdout(std::process::Stdio::piped())
+        .spawn()
+        .unwrap();
+    let mut child = out;
+    let mut stdin = child.stdin.take().unwrap();
+    for line in input.lines() {
+        stdin.write_all(format!("{line}\n").as_bytes()).await.unwrap();
+        tokio::time::sleep(std::time::Duration::from_millis(700)).await;
+    }
+    drop(stdin);
+    let out = child.wait_with_output().await.unwrap();
+    let text = String::from_utf8_lossy(&out.stdout);
+    assert_eq!(std::fs::read_to_string(home.work().join("a.txt")).unwrap(), "A\n", "{text}");
+    assert!(!home.work().join("b.txt").exists(), "{text}");
+    assert!(text.contains("╭ 確認"), "{text}");
+    let bodies = server.bodies.lock().unwrap().clone();
+    let last = bodies[3]["messages"].as_array().unwrap().last().unwrap().clone();
+    assert!(last["content"].as_str().unwrap().contains("理由: テストが先"), "{last}");
+}
