@@ -1,8 +1,7 @@
 //! The colours of ARCE.AI in the terminal.
 //!
-//! The tokens are the ones of the app (light and dark sets, the same names), so the CLI and the app
-//! look like one product. A terminal that cannot show 24-bit colour gets the nearest of the 256
-//! colours; `NO_COLOR` (or the setting `theme = "none"`) turns every colour off.
+//! One set of design tokens for a light and one for a dark background. A terminal that cannot show
+//! 24-bit colour gets the nearest of the 256 colours; `NO_COLOR` (or the setting `theme = "none"`) turns every colour off.
 
 use std::sync::OnceLock;
 

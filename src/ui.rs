@@ -2,7 +2,7 @@
 //!
 //! The controller only talks to [Ui]; how a reply looks is decided here. In the terminal a reply has
 //! no name, icon or frame: thinking (folded to a line or streamed faintly), tool lines, the text, and
-//! a faint summary line at the end, as the app draws it.
+//! a faint summary line at the end.
 
 use std::io::{IsTerminal, Write};
 use std::sync::Mutex;
